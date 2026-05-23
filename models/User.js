@@ -29,14 +29,13 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// hash password before saving, only if password exists or changed
-userSchema.pre("save", async function (next) {
+// hash password before saving
+userSchema.pre("save", async function () {
   if (!this.isModified("password") || !this.password) {
-    return next();
+    return;
   }
 
   this.password = await bcrypt.hash(this.password, 10);
-  next();
 });
 
 // compare login password with hashed password

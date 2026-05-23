@@ -1,30 +1,46 @@
-require("dotenv").config();
+const router = require("express").Router();
 
-const express = require("express");
+const User = require("../models/User");
+const { signToken } = require("../utils/auth");
 
-const connectDB = require("./config/db");
+// register user
+router.post("/register", async (req, res) => {
+  try {
+    const user = new User(req.body);
 
-const userRoutes = require("./routes/userRoutes");
+    await user.save();
 
-const app = express();
+    const token = signToken(user);
 
-const PORT = process.env.PORT || 3000;
-
-// connect database
-connectDB();
-
-// middleware
-app.use(express.json());
-
-// routes
-app.use("/api/users", userRoutes);
-
-// test route
-app.get("/", (req, res) => {
-  res.send("Project Tracker API is running");
+    res.status(201).json({ token, user });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
 });
 
-// server listener
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// login user
+router.post("/login", async (req, res) => {
+  try {
+    const user = await User.findOne({
+      email: req.body.email,
+    });
+
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    const correctPassword = await user.comparePassword(req.body.password);
+
+    if (!correctPassword) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    const token = signToken(user);
+
+    res.json({ token, user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
+
+module.exports = router;
